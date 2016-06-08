@@ -32,6 +32,7 @@ RUN cd /tmp/ && set -x && \
 	tar -xvf $RUBY_TAR_FILE && \
 	cd $RUBY_DIRECTORY && \
 	./configure --disable-install-doc && make -j 3 && make install && \
+	## For Chinese users who are behinde the Great Fire Wall.
 	gem sources --add http://gems.ruby-china.org/ --remove https://rubygems.org/ && \
 	gem install bundler && \
 	bundle config mirror.https://rubygems.org http://gems.ruby-china.org && \
@@ -44,11 +45,8 @@ RUN cd /opt/ && set -x && \
 	tar -xvf $REDMINE_TAR_FILE
 
 ENV RAILS_ENV production
-COPY config/database.yml $REDMINE_HOME/config/
 RUN cd $REDMINE_HOME && set -x && \
-	gem install mysql2 -v '0.3.21' && \
-	bundle install --without development test rmagick && \
-	bundle exec rake generate_secret_token
+	gem install mysql2 -v '0.3.21' 
 	
 ## Install redmine backlogs
 COPY redmine_backlogs-1.0.6.tar.gz /tmp/
@@ -58,9 +56,9 @@ RUN cd /tmp/ && set -x && \
 	rm $LOGBACKS_TAR_FILE && \
 	gem install holidays --version 1.0.3 && \
 	gem install holidays
-RUN cd $REDMINE_HOME && set -x && \
-	bundle install && \
-	bundle exec rake redmine:backlogs:install
+ADD config/database.yml $REDMINE_HOME/config/database.yml
+RUN cd $REDMINE_HOME && bundle install --without development test rmagick
+RUN rm $REDMINE_HOME/config/database.yml
 
 ## Install Apache Web Server
 RUN apt-get install apache2 apache2-dev libcurl4-gnutls-dev apache2 libapache2-mod-perl2 libdbd-mysql-perl libauthen-simple-ldap-perl openssl -y
@@ -83,6 +81,9 @@ ADD supervisor/*.conf /etc/supervisor/conf.d/
 
 ## Clean cached files.
 RUN rm -rf /var/lib/apt/lists/*
+
+## Install startup script
+ADD scripts/start-apache.sh /opt/start-apache.sh
 
 WORKDIR $REDMINE_HOME
 
