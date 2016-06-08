@@ -62,11 +62,31 @@ RUN cd $REDMINE_HOME && set -x && \
 	bundle install && \
 	bundle exec rake redmine:backlogs:install
 
-COPY scripts/start.sh $REDMINE_HOME
+## Install Apache Web Server
+RUN apt-get install apache2 apache2-dev libcurl4-gnutls-dev apache2 libapache2-mod-perl2 libdbd-mysql-perl libauthen-simple-ldap-perl openssl -y
+
+RUN a2enmod ssl && a2enmod perl && a2enmod dav && a2enmod dav_fs && a2enmod rewrite && a2enmod headers
+
+RUN cd $REDMINE_HOME && gem install passenger -v '5.0.28'
+RUN passenger-install-apache2-module -a
+
+ADD config/passenger.conf /etc/apache2/conf-available/passenger.conf
+ADD config/redmine.conf /etc/apache2/sites-available/redmine.conf
+
+RUN ln -s /etc/apache2/conf-available/passenger.conf /etc/apache2/conf-enabled/passenger.conf
+RUN rm -rf /var/www && ln -s $REDMINE_HOME/public /var/www && rm /etc/apache2/sites-enabled/* -rf
+RUN ln -s /etc/apache2/sites-available/redmine.conf /etc/apache2/sites-enabled/redmine.conf
+
+## Install supervisor
+RUN apt-get install -y supervisor dnsutils
+ADD supervisor/*.conf /etc/supervisor/conf.d/
+
+## Clean cached files.
+RUN rm -rf /var/lib/apt/lists/*
 
 WORKDIR $REDMINE_HOME
 
-EXPOSE 3000
+EXPOSE 80
 
-CMD ["./start.sh"]
+CMD ["supervisord", "-n"]
 
