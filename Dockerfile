@@ -59,6 +59,9 @@ RUN cd /tmp/ && set -x && \
 ADD config/database.yml $REDMINE_HOME/config/database.yml
 RUN cd $REDMINE_HOME && bundle install --without development test rmagick
 RUN rm $REDMINE_HOME/config/database.yml
+# Prepare the database schema.
+RUN rm -rf $REDMINE_HOME/db/schema.rb
+ADD db/schema.rb $REDMINE_HOME/db/schema.rb
 
 ## Install Apache Web Server
 RUN apt-get install apache2 apache2-dev libcurl4-gnutls-dev apache2 libapache2-mod-perl2 libdbd-mysql-perl libauthen-simple-ldap-perl openssl -y
